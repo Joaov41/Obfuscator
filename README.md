@@ -1,14 +1,34 @@
 # Talk to Documents
 
-A web application that allows users to interact with and process documents using AI-powered tools. The application features document redaction capabilities and AI-based document analysis.
+A web application that allows users to interact with and process documents using AI-powered tools. The application features document redaction capabilities with database persistence and AI-based document analysis.
+
+## Use Cases
+
+- **Legal Document Processing**: Redact sensitive information from legal documents while maintaining consistency
+- **GDPR Compliance**: Anonymize personal data in documents with reversible redaction
+- **Document Intelligence**: Extract insights and summaries from lengthy documents
+- **Data Privacy**: Process documents while protecting sensitive information
+- **Research & Analysis**: Interactive Q&A with documents for research purposes
 
 ## Features
 
-- Document upload and processing
-- AI-powered document analysis using OpenAI and Google Gemini
-- PDF processing capabilities
-- Document redaction functionality
-- Web-based user interface
+- **Document Upload & Processing**: Support for text files and PDF documents
+- **AI-Powered Analysis**: 
+  - Document summarization using OpenAI GPT models and Google Gemini
+  - Interactive Q&A with documents
+  - Multiple AI model support (GPT-4, GPT-4.5, Gemini 2.5, etc.)
+- **PDF Processing**: Extract and analyze text from PDF documents using PyMuPDF
+- **Advanced Redaction System**:
+  - Intelligent entity detection and redaction
+  - Custom entity redaction with selection
+  - Persistent redaction tracking in SQLite database
+  - Reversible anonymization/de-anonymization
+- **Database Capabilities**:
+  - SQLite database for storing redaction mappings
+  - Persistent storage of redacted entities
+  - Maintain consistency across document versions
+  - Support for bulk redaction operations
+- **Interactive Web Interface**: Modern React-based UI with Material Design
 
 ## Tech Stack
 
@@ -90,11 +110,36 @@ cd frontend/
 npm start
 ```
 
+## Database Features
+
+The application includes a robust SQLite database system for managing document redactions:
+
+### Redaction Database (`redactions.db`)
+- **Entity Mapping**: Stores original text to redacted placeholder mappings
+- **Persistent Storage**: Maintains redaction history across sessions
+- **Batch Operations**: Supports bulk redaction and de-anonymization
+- **Consistency**: Ensures same entities are redacted consistently throughout documents
+
+### Key Database Operations
+- `store_redaction()`: Save entity-redaction pairs to database
+- `apply_stored_redactions()`: Apply saved redactions to new documents
+- `deanonymize_using_db()`: Reverse redactions using stored mappings
+- `clean_text()`: Remove artifacts and clean document text
+
 ## API Documentation
 
 Once the backend is running, you can access the FastAPI documentation at:
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
+
+### Key API Endpoints
+- `POST /upload`: Upload and process documents (PDF, TXT)
+- `POST /redact`: Apply redactions to text with entity detection
+- `POST /summarize`: Generate AI-powered document summaries
+- `POST /followup`: Interactive Q&A with documents
+- `POST /deanonymize`: Reverse redactions using database mappings
+- `POST /api/configure-keys`: Configure API keys
+- `GET /api/check-keys`: Check API key configuration status
 
 ## Project Structure
 
@@ -102,10 +147,11 @@ Once the backend is running, you can access the FastAPI documentation at:
 Talk to documents/
 ├── backend/
 │   ├── main.py          # FastAPI application entry point
-│   ├── redactor.py      # Document redaction logic
-│   ├── utils.py         # Utility functions
+│   ├── redactor.py      # Document redaction logic & database operations
+│   ├── utils.py         # Utility functions & entity detection
 │   ├── requirements.txt # Python dependencies
-│   └── redactions.db    # SQLite database
+│   ├── redactions.db    # SQLite database (auto-created)
+│   └── api_keys.pkl     # Encrypted API keys storage (git-ignored)
 ├── frontend/
 │   ├── src/
 │   │   ├── App.js       # Main React component
@@ -120,12 +166,18 @@ Talk to documents/
 
 ```
 
-## Environment Variables
+## API Key Configuration
 
-To use the AI features, you'll need to set up API keys:
+The application uses a secure API key management system:
 
-- **OpenAI API Key**: Set as environment variable `OPENAI_API_KEY`
-- **Google Gemini API Key**: Configure as needed in the application
+1. **First-time Setup**: On first launch, you'll be prompted to configure API keys
+2. **Access Settings**: Click the settings icon (⚙️) in the top-right corner
+3. **Add Your Keys**: 
+   - **OpenAI API Key**: Get from [OpenAI Platform](https://platform.openai.com/api-keys)
+   - **Google Gemini API Key**: Get from [Google AI Studio](https://makersuite.google.com/app/apikey)
+4. **Secure Storage**: Keys are stored locally in `api_keys.pkl` (never committed to git)
+
+Note: At least one API key (OpenAI or Gemini) is required for AI features to work.
 
 ## Contributing
 
