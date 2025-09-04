@@ -1,0 +1,109 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+
+# Conda
+conda-meta/
+*.conda
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# React build
+frontend/build/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Testing
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# API Keys and Secrets
+*.key
+*.pem
+secrets/
+api_keys.pkl
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Package lock files (keep one or the other)
+# package-lock.json
+# yarn.lock

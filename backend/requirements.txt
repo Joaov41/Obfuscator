@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+# spacy, openai, and other dependencies should be added as you integrate your logic
+openai
+google-generativeai
+PyMuPDF # For PDF processing
