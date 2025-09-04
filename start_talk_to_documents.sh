@@ -3,107 +3,207 @@
 # for the "Talk to documents" application.
 
 # --- Configuration ---
-# Project directory name
-PROJECT_DIR_NAME="Talk to documents"
-# Assumed location of the project directory
-BASE_PROJECT_PATH="$HOME/Documents" # $HOME usually expands to /Users/your_username
-# Full path to the project root
-PROJECT_ROOT="$BASE_PROJECT_PATH/$PROJECT_DIR_NAME"
+# Automatically detect the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$SCRIPT_DIR"
 
 # Conda environment name for the backend
-CONDA_ENV_NAME="redactor-backend" # Keep this if it's your existing backend env
+CONDA_ENV_NAME="redactor-backend"
+
+# Ports configuration
+BACKEND_PORT=8000
+FRONTEND_PORT=3000
+
+# --- Color codes for output ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# --- Functions ---
+print_status() {
+    echo -e "${GREEN}[✓]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[✗]${NC} $1" >&2
+}
+
+print_warning() {
+    echo -e "${YELLOW}[!]${NC} $1"
+}
+
+kill_port_process() {
+    local port=$1
+    local pids=$(lsof -ti:$port 2>/dev/null)
+    if [ ! -z "$pids" ]; then
+        print_warning "Found process(es) using port $port. Killing..."
+        echo $pids | xargs kill -9 2>/dev/null
+        sleep 1
+        print_status "Port $port cleared"
+    fi
+}
+
+# --- Startup ---
+echo "========================================="
+echo "  Talk to Documents - Application Startup"
+echo "========================================="
+echo ""
+print_status "Project root: $PROJECT_ROOT"
+echo ""
+
+# --- Kill existing processes on required ports ---
+echo "Checking for existing processes..."
+kill_port_process $BACKEND_PORT
+kill_port_process $FRONTEND_PORT
+echo ""
 
 # --- Environment Setup ---
 echo "Setting up environment..."
 
-# Source Conda
-CONDA_BASE_DIR="/opt/anaconda3" # Or your specific Anaconda/Miniconda installation path
-if [ -f "$CONDA_BASE_DIR/etc/profile.d/conda.sh" ]; then
-    source "$CONDA_BASE_DIR/etc/profile.d/conda.sh"
-    echo "Conda sourced from $CONDA_BASE_DIR."
-else
-    echo "ERROR: conda.sh not found at $CONDA_BASE_DIR/etc/profile.d/conda.sh. Please check CONDA_BASE_DIR." >&2
-    exit 1
+# Try to find conda in common locations
+CONDA_PATHS=(
+    "/opt/anaconda3"
+    "/opt/miniconda3"
+    "$HOME/anaconda3"
+    "$HOME/miniconda3"
+    "/usr/local/anaconda3"
+    "/usr/local/miniconda3"
+    "$HOME/miniforge3"
+    "/opt/homebrew/anaconda3"
+)
+
+CONDA_FOUND=false
+for conda_path in "${CONDA_PATHS[@]}"; do
+    if [ -f "$conda_path/etc/profile.d/conda.sh" ]; then
+        source "$conda_path/etc/profile.d/conda.sh"
+        CONDA_FOUND=true
+        print_status "Conda sourced from $conda_path"
+        break
+    fi
+done
+
+if [ "$CONDA_FOUND" = false ]; then
+    # Try to use conda if it's already in PATH
+    if command -v conda &> /dev/null; then
+        print_warning "Using conda from PATH"
+    else
+        print_error "Conda not found. Please install Anaconda/Miniconda or adjust the script."
+        exit 1
+    fi
 fi
 
-# Add Homebrew (and npm) to PATH if it exists
-HOMEBREW_PREFIX="/opt/homebrew" # Common for Apple Silicon Macs
-if [ -d "$HOMEBREW_PREFIX/bin" ]; then
-    export PATH="$HOMEBREW_PREFIX/bin:$HOMEBREW_PREFIX/sbin:$PATH"
-    echo "Homebrew added to PATH from $HOMEBREW_PREFIX."
-else
-    echo "INFO: Homebrew directory $HOMEBREW_PREFIX/bin not found. Assuming npm is in PATH."
+# Add Homebrew to PATH if it exists (for npm)
+if [ -d "/opt/homebrew/bin" ]; then
+    export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+    print_status "Homebrew added to PATH"
+elif [ -d "/usr/local/bin" ]; then
+    export PATH="/usr/local/bin:$PATH"
 fi
 
 # --- Validate Project Path ---
 if [ ! -d "$PROJECT_ROOT" ]; then
-    echo "ERROR: Project directory not found at $PROJECT_ROOT" >&2
-    echo "Please ensure the folder '$PROJECT_DIR_NAME' exists in '$BASE_PROJECT_PATH'." >&2
+    print_error "Project directory not found at $PROJECT_ROOT"
     exit 1
 fi
-echo "Project root identified as: $PROJECT_ROOT"
+
+if [ ! -d "$PROJECT_ROOT/backend" ]; then
+    print_error "Backend directory not found at $PROJECT_ROOT/backend"
+    exit 1
+fi
+
+if [ ! -d "$PROJECT_ROOT/frontend" ]; then
+    print_error "Frontend directory not found at $PROJECT_ROOT/frontend"
+    exit 1
+fi
+
+print_status "Project structure validated"
+echo ""
 
 # --- Start Backend ---
 echo "Starting backend server..."
 (
   cd "$PROJECT_ROOT/backend" || {
-    echo "ERROR: Failed to navigate to backend directory: $PROJECT_ROOT/backend" >&2
-    exit 1 # Exit subshell
+    print_error "Failed to navigate to backend directory"
+    exit 1
   }
-  echo "Current directory for backend: $(pwd)"
-
-  # Activate Conda environment
-  conda activate "$CONDA_ENV_NAME" || {
-    echo "ERROR: Failed to activate Conda environment '$CONDA_ENV_NAME'." >&2
-    echo "Please ensure the environment exists. You can create it with:" >&2
-    echo "conda create -n $CONDA_ENV_NAME python=3.9 # Or your desired Python version" >&2
-    echo "Then, navigate to $PROJECT_ROOT/backend and run: pip install -r requirements.txt" >&2
-    exit 1 # Exit subshell
-  }
-  echo "Successfully activated Conda environment: $CONDA_DEFAULT_ENV"
   
-  echo "Starting Uvicorn server for FastAPI backend..."
-  # Ensure PyMuPDF (fitz) and other dependencies are installed in this environment
-  python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+  # Check if conda environment exists
+  if conda env list | grep -q "^$CONDA_ENV_NAME "; then
+    conda activate "$CONDA_ENV_NAME" || {
+      print_error "Failed to activate Conda environment '$CONDA_ENV_NAME'"
+      exit 1
+    }
+    print_status "Activated Conda environment: $CONDA_ENV_NAME"
+  else
+    print_warning "Conda environment '$CONDA_ENV_NAME' not found"
+    print_warning "Create it with: conda create -n $CONDA_ENV_NAME python=3.9"
+    print_warning "Then: pip install -r $PROJECT_ROOT/backend/requirements.txt"
+    print_warning "Attempting to continue with current Python environment..."
+  fi
+  
+  print_status "Starting FastAPI backend on port $BACKEND_PORT..."
+  python -m uvicorn main:app --reload --host 0.0.0.0 --port $BACKEND_PORT
 ) &
 BACKEND_PID=$!
-echo "Backend server started with PID: $BACKEND_PID"
-# Wait a few seconds for the backend to initialize
-sleep 5
+print_status "Backend server started with PID: $BACKEND_PID"
+
+# Wait for backend to initialize
+echo "Waiting for backend to initialize..."
+sleep 3
+
+# Check if backend is responding
+if curl -s -o /dev/null -w "%{http_code}" http://localhost:$BACKEND_PORT/docs | grep -q "200"; then
+    print_status "Backend is responding at http://localhost:$BACKEND_PORT"
+else
+    print_warning "Backend may not be fully initialized yet"
+fi
+echo ""
 
 # --- Start Frontend ---
 echo "Starting frontend development server..."
 cd "$PROJECT_ROOT/frontend" || {
-  echo "ERROR: Failed to navigate to frontend directory: $PROJECT_ROOT/frontend" >&2
-  # Optionally kill the backend if frontend fails to start
-  # kill $BACKEND_PID
+  print_error "Failed to navigate to frontend directory"
+  kill $BACKEND_PID 2>/dev/null
   exit 1
 }
-echo "Current directory for frontend: $(pwd)"
 
 # Check for npm
 if ! command -v npm &> /dev/null; then
-    echo "ERROR: npm could not be found. Please ensure Node.js and npm are installed and in your PATH." >&2
-    # kill $BACKEND_PID
+    print_error "npm not found. Please install Node.js and npm"
+    kill $BACKEND_PID 2>/dev/null
     exit 1
 fi
 
-echo "Starting npm development server for React frontend..."
-# This will typically open the app in a browser.
-# If it doesn't, you might need to manually open http://localhost:3000 (or whatever port it uses)
-npm start
+# Check if node_modules exists
+if [ ! -d "node_modules" ]; then
+    print_warning "node_modules not found. Running npm install..."
+    npm install || {
+        print_error "npm install failed"
+        kill $BACKEND_PID 2>/dev/null
+        exit 1
+    }
+fi
 
-# --- Cleanup (Optional) ---
-# This part is tricky because npm start usually runs in the foreground and keeps the script alive.
-# If you want to kill the backend when you stop the frontend (e.g., with Ctrl+C),
-# you might need a more complex trap mechanism.
-# For now, this script will exit when npm start is terminated. The backend will continue running in the background.
-# You would typically stop the backend manually using its PID or by closing the terminal if not detached.
+print_status "Starting React frontend on port $FRONTEND_PORT..."
+echo ""
+echo "========================================="
+echo -e "${GREEN}Application starting...${NC}"
+echo ""
+echo "  Backend:  http://localhost:$BACKEND_PORT"
+echo "  Frontend: http://localhost:$FRONTEND_PORT"
+echo "  API Docs: http://localhost:$BACKEND_PORT/docs"
+echo ""
+echo "Press Ctrl+C to stop all servers"
+echo "========================================="
+echo ""
 
-# To ensure backend is killed when script exits (e.g. on Ctrl+C of npm start)
-# trap "echo 'Stopping backend server...'; kill $BACKEND_PID; exit" SIGINT SIGTERM
-# echo "Frontend server started. Press Ctrl+C to stop both frontend and (if trap is enabled) backend."
-# wait $BACKEND_PID # This would make the script wait for the backend if npm start was also backgrounded.
-# Since npm start is foreground, the script effectively waits for it.
+# Set up trap to kill backend when frontend stops
+trap "echo ''; print_warning 'Shutting down servers...'; kill $BACKEND_PID 2>/dev/null; exit" SIGINT SIGTERM
 
-echo "Script finished. If npm start was exited, the backend server (PID: $BACKEND_PID) might still be running." 
+# Start frontend (this will run in foreground)
+PORT=$FRONTEND_PORT npm start
+
+# This line only executes if npm start exits normally
+print_warning "Frontend server stopped. Cleaning up..."
+kill $BACKEND_PID 2>/dev/null

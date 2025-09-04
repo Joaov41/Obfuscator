@@ -596,13 +596,13 @@ export default function RedactorApp() {
           >
             New Document / Reset
           </Button>
-          <IconButton 
+          <Button 
             color="inherit" 
+            startIcon={<SettingsIcon />}
             onClick={() => setApiKeyDialogOpen(true)}
-            title="Configure API Keys"
           >
-            <SettingsIcon />
-          </IconButton>
+            API Keys
+          </Button>
         </Toolbar>
       </AppBar>
       

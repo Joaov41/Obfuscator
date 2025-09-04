@@ -298,11 +298,10 @@ async def summarize_stream(data: SummarizeRequest):
                 sys.stdout.flush()
                 
                 gemini_api_key = api_keys_store.get('gemini_key')
-            if not gemini_api_key:
+                if not gemini_api_key:
                     yield f"data: {json.dumps({'error': 'Gemini API key not provided'})}\n\n"
                     return
                 
-                gemini_api_key = api_keys_store.get('gemini_key')
                 genai.configure(api_key=gemini_api_key)
                 
                 try:
@@ -454,11 +453,10 @@ async def followup_stream(data: FollowUpRequest):
                 sys.stdout.flush()
                 
                 gemini_api_key = api_keys_store.get('gemini_key')
-            if not gemini_api_key:
+                if not gemini_api_key:
                     yield f"data: {json.dumps({'error': 'Gemini API key not provided'})}\n\n"
                     return
                 
-                gemini_api_key = api_keys_store.get('gemini_key')
                 genai.configure(api_key=gemini_api_key)
                 
                 try:
@@ -536,10 +534,17 @@ async def configure_api_keys(data: APIKeysRequest):
     """Configure API keys for OpenAI and Gemini"""
     global api_keys_store
     
-    if data.openai_key:
-        api_keys_store['openai_key'] = data.openai_key
-    if data.gemini_key:
-        api_keys_store['gemini_key'] = data.gemini_key
+    # Validate and store OpenAI key
+    if data.openai_key and data.openai_key.strip():
+        # Basic validation: OpenAI keys should start with 'sk-'
+        if data.openai_key.startswith('sk-') and len(data.openai_key) > 20:
+            api_keys_store['openai_key'] = data.openai_key
+    
+    # Validate and store Gemini key  
+    if data.gemini_key and data.gemini_key.strip():
+        # Basic validation: Gemini keys should start with 'AIza'
+        if data.gemini_key.startswith('AIza') and len(data.gemini_key) > 20:
+            api_keys_store['gemini_key'] = data.gemini_key
     
     # Save to persistent storage
     save_api_keys(api_keys_store)
